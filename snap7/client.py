@@ -47,6 +47,12 @@ class Client:
         >>> data.db_write(1, 0, data)
     """
 
+    ip : Optional[str]
+    rack: Optional[int] = 0
+    slot: Optional[int] = 0
+    port: Optional[int] = 112
+
+
     def __init__(self, lib_location: Optional[str] = None):
         """Creates a new `Client` instance.
 
@@ -68,6 +74,13 @@ class Client:
 
     def __del__(self):
         self.destroy()
+
+    def __enter__(self):
+        self.connect_to_params()
+        return self
+
+    def __exit__(self, tpe, value, traceback):
+        self.disconnect()
 
     def create(self):
         """Creates a SNAP7 client.
@@ -170,6 +183,15 @@ class Client:
         """
         logger.info("disconnecting snap7 client")
         return self._library.Cli_Disconnect(self._pointer)
+
+    @error_wrap
+    def connect_to_params(self) -> int:
+        logger.info(f"connecting to {self.ip}:{self.port} rack {self.rack} slot {self.slot}")
+        self.set_param(snap7.types.RemotePort, self.port)
+        return self._library.Cli_ConnectTo(
+            self._pointer, c_char_p(self.ip.encode()),
+            c_int(self.rack), c_int(self.slot)
+        )
 
     @error_wrap
     def connect(self, address: str, rack: int, slot: int, tcpport: int = 102) -> int:
